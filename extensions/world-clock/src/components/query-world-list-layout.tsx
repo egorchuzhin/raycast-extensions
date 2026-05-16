@@ -12,7 +12,7 @@ import { useAllTimezones } from "../hooks/useAllTimezones";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 
 export function QueryWorldListLayout() {
-  const [tag, setTag] = useState<string>("");
+  const [tag, setTag] = useState<string>("All");
   const [region, setRegion] = useState<string>("");
 
   const { data: allTimezonesData, isLoading: allTimezonesLoading } = useAllTimezones();

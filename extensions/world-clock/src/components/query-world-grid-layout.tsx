@@ -11,7 +11,7 @@ import { useStarTimezones } from "../hooks/useStarTimezones";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 
 export function QueryWorldGridLayout() {
-  const [tag, setTag] = useState<string>("");
+  const [tag, setTag] = useState<string>("All");
   const [region, setRegion] = useState<string>("");
 
   const { data: allTimezonesData, isLoading: allTimezonesLoading } = useAllTimezones();

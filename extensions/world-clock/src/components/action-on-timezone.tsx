@@ -20,27 +20,25 @@ export function ActionOnTimezone(props: {
   return (
     <ActionPanel>
       {currentTime && currentTime.timeZone === timezone && <ActionTimeInfo currentTime={currentTime} />}
-      {currentTime && currentTime.timeZone === timezone && (
-        <Action
-          icon={Icon.Star}
-          title={"Star Timezone"}
-          shortcut={{ modifiers: ["cmd"], key: "s" }}
-          onAction={async () => {
-            const timezoneInfo = await getTimeZoneInfo(timezone);
-            if (timezoneInfo) {
-              await addTimeZones(starTimezones, {
-                timezone: timezone,
-                utc_offset: String(timezoneInfo.currentUtcOffset.seconds / TIME_SECOND_TO_HOUR),
-                date_time: "",
-                unixtime: 0,
-              });
-            } else {
-              await showToast(Toast.Style.Failure, "Error", "Failed to get timezone information");
-            }
-            await mutate();
-          }}
-        />
-      )}
+      <Action
+        icon={Icon.Star}
+        title={"Star Timezone"}
+        shortcut={{ modifiers: ["cmd"], key: "s" }}
+        onAction={async () => {
+          const timezoneInfo = await getTimeZoneInfo(timezone);
+          if (timezoneInfo) {
+            await addTimeZones(starTimezones, {
+              timezone: timezone,
+              utc_offset: String(timezoneInfo.currentUtcOffset.seconds / TIME_SECOND_TO_HOUR),
+              date_time: "",
+              unixtime: 0,
+            });
+          } else {
+            await showToast(Toast.Style.Failure, "Error", "Failed to get timezone information");
+          }
+          await mutate();
+        }}
+      />
       {itemLayout === "List" && <ActionToggleDetails showDetail={showDetail} showDetailMutate={showDetailMutate} />}
       <ActionOpenCommandPreferences command={true} extension={true} />
     </ActionPanel>

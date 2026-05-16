@@ -1,5 +1,10 @@
 # World Clock Changelog
 
+## [Fix Starred Timezones] - 2026-05-16
+
+- Always allow starring a timezone from the timezone list, instead of requiring the current time API to first respond for the highlighted item
+- Default the filter tag to "All" so the Starred section is visible on first launch before the dropdown initializes
+
 ## [Windows Support and Bugfixes] - 2025-11-18
 
 - Added Windows support for the World Clock extension.
