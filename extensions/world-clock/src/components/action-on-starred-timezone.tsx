@@ -6,7 +6,7 @@ import { ActionOpenCommandPreferences } from "./action-open-command-preferences"
 import { ActionTimeInfo } from "./action-time-info";
 import EditTimeZone from "../edit-time-zone";
 import { Preferences } from "../types/preferences";
-import { addTimeZones, isEmpty } from "../utils/common-utils";
+import { addTimeZones } from "../utils/common-utils";
 import { MutatePromise } from "@raycast/utils";
 
 export function ActionOnStarredTimezone(props: {
@@ -25,12 +25,6 @@ export function ActionOnStarredTimezone(props: {
         <ActionTimeInfo currentTime={currentTime} />
       )}
       <ActionPanel.Section>
-        <Action.CreateQuicklink
-          quicklink={{
-            name: isEmpty(timezone.alias) ? timezone.timezone : String(timezone.alias),
-            link: `raycast://extensions/koinzhang/world-clock/query-world-time?arguments=${encodeURIComponent(JSON.stringify({ timezone: timezone.timezone }))}`,
-          }}
-        />
         <Action
           icon={Icon.StarDisabled}
           title={"Unstar Timezone"}
