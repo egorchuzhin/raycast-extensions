@@ -11,9 +11,10 @@ import { useStarTimezones } from "../hooks/useStarTimezones";
 import { useAllTimezones } from "../hooks/useAllTimezones";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 
-export function QueryWorldListLayout() {
+export function QueryWorldListLayout({ initialSearch = "" }: { initialSearch?: string }) {
   const [tag, setTag] = useState<string>("All");
   const [region, setRegion] = useState<string>("");
+  const [searchText, setSearchText] = useState<string>(initialSearch);
 
   const { data: allTimezonesData, isLoading: allTimezonesLoading } = useAllTimezones();
 
@@ -41,6 +42,8 @@ export function QueryWorldListLayout() {
     <List
       isShowingDetail={showDetail && timezones.length !== 0}
       isLoading={starTimezonesLoading || allTimezonesLoading}
+      searchText={searchText}
+      onSearchTextChange={setSearchText}
       searchBarPlaceholder={"Search timezones"}
       onSelectionChange={(id) => {
         if (typeof id === "string" && !isEmpty(id)) {

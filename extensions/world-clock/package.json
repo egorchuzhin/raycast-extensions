@@ -28,6 +28,14 @@
       "title": "Query World Time",
       "description": "Query the current time for a timezone with region.",
       "mode": "view",
+      "arguments": [
+        {
+          "name": "timezone",
+          "placeholder": "Timezone",
+          "type": "text",
+          "required": false
+        }
+      ],
       "preferences": [
         {
           "name": "itemLayout",

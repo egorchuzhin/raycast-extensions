@@ -10,9 +10,10 @@ import { useAllTimezones } from "../hooks/useAllTimezones";
 import { useStarTimezones } from "../hooks/useStarTimezones";
 import { useCurrentTime } from "../hooks/useCurrentTime";
 
-export function QueryWorldGridLayout() {
+export function QueryWorldGridLayout({ initialSearch = "" }: { initialSearch?: string }) {
   const [tag, setTag] = useState<string>("All");
   const [region, setRegion] = useState<string>("");
+  const [searchText, setSearchText] = useState<string>(initialSearch);
 
   const { data: allTimezonesData, isLoading: allTimezonesLoading } = useAllTimezones();
 
@@ -36,6 +37,8 @@ export function QueryWorldGridLayout() {
       inset={Grid.Inset.Small}
       columns={parseInt(columns)}
       isLoading={starTimezonesLoading || allTimezonesLoading}
+      searchText={searchText}
+      onSearchTextChange={setSearchText}
       searchBarPlaceholder={"Search timezones"}
       onSelectionChange={(id) => {
         if (typeof id === "string" && !isEmpty(id)) {
