@@ -4,20 +4,71 @@ import { runAppleScript } from "@raycast/utils";
 const TELEMOST_URL = "https://telemost.yandex.ru";
 const MEETING_PATH_PREFIX = "/j/";
 const MEETING_RESULT_PREFIX = "meeting:";
+const CLICKED_RESULT_PREFIX = "clicked:";
+const WAITING_RESULT_PREFIX = "waiting:";
 
-// Single JS payload: detects success URL or clicks the create button.
-// Returns "meeting:<url>" if the tab already shows a meeting, "clicked", or "waiting".
+// Single JS payload: detects success URL or clicks the best "create meeting" control.
+// Returns "meeting:<url>", "clicked:<label>", "pending:<label>" (recently clicked, give the page time)
+// or "waiting:<visible button labels>".
+// NOTE: newlines are collapsed to spaces before sending, so no `//` comments inside the payload.
 const CHECK_AND_CLICK_JS = `
 (function() {
   if (location.pathname.indexOf('${MEETING_PATH_PREFIX}') === 0) {
     return '${MEETING_RESULT_PREFIX}' + location.href;
   }
-  var all = Array.from(document.querySelectorAll('button, a, [role="button"]'));
-  var btn = all.find(function(el) {
-    return el.innerText && el.innerText.trim().indexOf('Создать') === 0;
+  var EXCLUDE = /трансляц|эфир|стрим|запланир|календар|расписан|подключ|присоедин|войти|вход|скачать|приложени/;
+  var norm = function(s) { return (s || '').replace(/\\s+/g, ' ').trim().toLowerCase(); };
+  var usable = function(el) {
+    if (el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
+    var r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return false;
+    var cs = getComputedStyle(el);
+    return cs.visibility !== 'hidden' && cs.display !== 'none' && cs.pointerEvents !== 'none';
+  };
+  var score = function(el, label) {
+    if (EXCLUDE.test(label)) return 0;
+    var role = el.getAttribute('role') || '';
+    var inPopup = role.indexOf('menuitem') === 0 || role === 'option' ||
+      !!el.closest('[role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"]');
+    if (inPopup && /встреч/.test(label)) return 100;
+    if (/^(создать|начать|новая|новую) (видео)?встреч/.test(label)) return 90;
+    if (label === 'создать') return 80;
+    if (label.indexOf('создать') === 0) return 50;
+    return 0;
+  };
+  var fire = function(el, full) {
+    el.scrollIntoView({ block: 'center' });
+    if (!full) { el.click(); return; }
+    var r = el.getBoundingClientRect();
+    var o = { bubbles: true, cancelable: true, view: window, button: 0, buttons: 1,
+      clientX: r.left + r.width / 2, clientY: r.top + r.height / 2,
+      pointerId: 1, pointerType: 'mouse', isPrimary: true };
+    try { el.dispatchEvent(new PointerEvent('pointerdown', o)); } catch (e) {}
+    el.dispatchEvent(new MouseEvent('mousedown', o));
+    try { el.dispatchEvent(new PointerEvent('pointerup', o)); } catch (e) {}
+    el.dispatchEvent(new MouseEvent('mouseup', o));
+    el.dispatchEvent(new MouseEvent('click', o));
+  };
+  var nodes = Array.from(document.querySelectorAll(
+    'button, a, [role="button"], [role="link"], [role^="menuitem"], [role="option"]'));
+  var best = null, bestScore = 0, bestLabel = '', seen = [];
+  nodes.forEach(function(el) {
+    if (!usable(el)) return;
+    var label = norm(el.innerText) || norm(el.getAttribute('aria-label')) || norm(el.getAttribute('title'));
+    if (!label) return;
+    if (seen.length < 12 && seen.indexOf(label) === -1) seen.push(label.slice(0, 40));
+    var s = score(el, label);
+    if (s > bestScore) { best = el; bestScore = s; bestLabel = label; }
   });
-  if (btn) { btn.click(); return 'clicked'; }
-  return 'waiting';
+  if (!best) return '${WAITING_RESULT_PREFIX}' + seen.join(' | ');
+  var st = window.__raycastTelemost || (window.__raycastTelemost = {});
+  var key = bestScore + '|' + bestLabel;
+  var rec = st[key] || (st[key] = { at: 0, n: 0 });
+  if (Date.now() - rec.at < 2500) return 'pending:' + bestLabel;
+  rec.at = Date.now();
+  rec.n += 1;
+  fire(best, rec.n % 2 === 0);
+  return '${CLICKED_RESULT_PREFIX}' + bestLabel;
 })()
 `.trim();
 
@@ -100,6 +151,8 @@ export async function createMeeting(refocus: boolean): Promise<void> {
   // clicks the create button. Handles every state in one AppleScript call.
   const deadline = Date.now() + 30_000;
   let clicked = false;
+  let lastClickedLabel = "";
+  let lastSeenButtons = "";
 
   // Track the initial /j/ URL (if any) so we can ignore it — it represents a meeting
   // the user already had open, not the one we're creating now.
@@ -124,9 +177,13 @@ export async function createMeeting(refocus: boolean): Promise<void> {
         if (staleUrl === null) {
           staleUrl = url;
         }
-      } else if (result === "clicked" && !clicked) {
+      } else if (result.startsWith(CLICKED_RESULT_PREFIX)) {
         clicked = true;
+        lastClickedLabel = result.slice(CLICKED_RESULT_PREFIX.length);
         toast.title = "Waiting for meeting…";
+        toast.message = `Clicked “${lastClickedLabel}”`;
+      } else if (result.startsWith(WAITING_RESULT_PREFIX)) {
+        lastSeenButtons = result.slice(WAITING_RESULT_PREFIX.length);
       }
     } catch (e) {
       const msg = String(e);
@@ -159,6 +216,6 @@ export async function createMeeting(refocus: boolean): Promise<void> {
   toast.style = Toast.Style.Failure;
   toast.title = "Timeout";
   toast.message = clicked
-    ? "Couldn't detect meeting URL — copy it manually"
-    : "Couldn't find the create-meeting button — click it manually";
+    ? `Clicked “${lastClickedLabel}” but no meeting link appeared — finish manually`
+    : `Couldn't find the create-meeting button${lastSeenButtons ? ` (seen: ${lastSeenButtons})` : ""}`;
 }
